@@ -33,7 +33,9 @@ class NearestNeighborClassifier:
         Returns:
             tuple of x and y both torch.Tensor's.
         """
-        raise NotImplementedError
+        #raise NotImplementedError
+        result = (torch.tensor(x), torch.tensor(y))
+        return result
 
     @classmethod
     def compute_data_statistics(cls, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
@@ -48,7 +50,10 @@ class NearestNeighborClassifier:
             tuple of mean and standard deviation of the data.
             Both should have a shape [1, D]
         """
-        raise NotImplementedError
+        mean = x.mean(dim=0).unsqueeze(0)
+        std = x.std(dim=0).unsqueeze(0)
+        return mean, std
+
 
     def input_normalization(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -72,9 +77,9 @@ class NearestNeighborClassifier:
         Returns:
             tuple of the nearest neighbor data point [D] and its label [1]
         """
-        raise NotImplementedError
+        #raise NotImplementedError
         x = self.input_normalization(x)
-        idx = ...  # Implement me:
+        idx = x.sub(self.data_normalized).pow(2).sum(dim=1).argmin()
         return self.data[idx], self.label[idx]
 
     def get_k_nearest_neighbor(self, x: torch.Tensor, k: int) -> tuple[torch.Tensor, torch.Tensor]:
@@ -90,9 +95,9 @@ class NearestNeighborClassifier:
             data points will be size (k, D)
             labels will be size (k,)
         """
-        raise NotImplementedError
+        #raise NotImplementedError
         x = self.input_normalization(x)
-        idx = ...  # Implement me:
+        idx = x.sub(self.data_normalized).pow(2).sum(dim=1).topk(k).indices
         return self.data[idx], self.label[idx]
 
     def knn_regression(self, x: torch.Tensor, k: int) -> torch.Tensor:
@@ -107,4 +112,6 @@ class NearestNeighborClassifier:
         Returns:
             average value of labels from the k neighbors. Tensor of shape [1]
         """
-        raise NotImplementedError
+        #raise NotImplementedError
+        neighbors = self.get_k_nearest_neighbor(x, k)[1]
+        return neighbors.mean()
