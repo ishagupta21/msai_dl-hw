@@ -96,9 +96,10 @@ class NearestNeighborClassifier:
             labels will be size (k,)
         """
         #raise NotImplementedError
-        x = self.input_normalization(x)
-        idx = x.sub(self.data_normalized).pow(2).sum(dim=1).topk(k).indices
+        dist = (self.data - x).norm(dim=1)
+        _, idx = torch.topk(dist, k, largest=False)        
         return self.data[idx], self.label[idx]
+        
 
     def knn_regression(self, x: torch.Tensor, k: int) -> torch.Tensor:
         """

@@ -106,7 +106,7 @@ class PyTorchBasics:
         Solution length: 27 characters
         """
         #raise NotImplementedError
-        return y > x.mean().sum()
+        return (y > x.mean()).sum()
 
     @staticmethod
     def make_it_pytorch_5(x: torch.Tensor) -> torch.Tensor:
@@ -164,7 +164,7 @@ class PyTorchBasics:
         Solution length: 27 characters
         """
         #raise NotImplementedError
-        return x.diagonal(dim1=0, dim2=1)
+        return x.flip(1).diagonal()
 
     @staticmethod
     def make_it_pytorch_8(x: torch.Tensor) -> torch.Tensor:
@@ -235,7 +235,8 @@ class PyTorchBasics:
         Solution length: 49 characters
         """
         #raise NotImplementedError
-        return torch.where(x<c, torch.zeros_like(x), x)
+        return torch.where(x < c, torch.tensor(0.0), x)
+        
 
     @staticmethod
     def make_it_pytorch_11(x: torch.Tensor, c: torch.Tensor) -> torch.Tensor:
@@ -260,8 +261,9 @@ class PyTorchBasics:
         Solution length: 30 characters
         """
         #raise NotImplementedError
-        return torch.nonzero(x<c)
-
+        return torch.nonzero(x < c).T
+       
+    
     @staticmethod
     def make_it_pytorch_12(x: torch.Tensor, m: torch.BoolTensor) -> torch.Tensor:
         """
@@ -328,4 +330,4 @@ class PyTorchBasics:
         Solution length: 64 characters
         """
         #raise NotImplementedError
-        return torch.where(torch.abs(x.unsqueeze(1)-y)<1e-3).sum()
+        return torch.sum((x.unsqueeze(1) - y).abs().min(dim=1).values < 1e-3)

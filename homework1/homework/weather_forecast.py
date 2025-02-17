@@ -46,8 +46,20 @@ class WeatherForecast:
             tensor with size (num_days,)
         """
         #raise NotImplementedError
-        avg = self.data.mean(dim=1).unsqueeze(1)
-        return (self.data - avg).abs().max(dim=1).values
+        mean = self.data.mean(dim=1, keepdim=True)
+    
+        # Find the absolute deviation from the mean for each measurement
+        deviation = (self.data - mean).abs()
+        
+        # Find the indices of the maximum deviation for each day
+        max_indices = deviation.argmax(dim=1)
+        
+        # Use the indices to gather the actual temperature values
+        most_extreme_values = self.data[torch.arange(self.data.size(0)), max_indices]
+        
+        return most_extreme_values
+       
+       
 
     def max_last_k_days(self, k: int) -> torch.Tensor:
         """
@@ -57,7 +69,7 @@ class WeatherForecast:
             tensor of size (k,)
         """
         #raise NotImplementedError
-        return self.data[-k:].max(dim=0).values
+        return self.data[-k:].max(dim=1).values
 
     def predict_temperature(self, k: int) -> torch.Tensor:
         """
