@@ -4,6 +4,16 @@ title: Homework 1
 permalink: /homework/01/index.html
 ---
 
+## Added by Isha 
+
+In order to run this in VS Code - 
+1. Open Homework1(grader, homework folder will be directly under it) directly in VSCode
+2. Fix the .references 
+3. Run the init and other files under grader
+4. Run homework files. (pyc will be generated)
+5. Run the grader
+
+
 ## Homework 1
 
 In this homework, we will practice **how to code in PyTorch**.
