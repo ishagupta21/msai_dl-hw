@@ -25,7 +25,8 @@ class ClassificationLoss(nn.Module):
         Returns:
             tensor, scalar loss
         """
-        raise NotImplementedError("ClassificationLoss.forward() is not implemented")
+        return nn.CrossEntropyLoss()(logits,target)
+        #raise NotImplementedError("ClassificationLoss.forward() is not implemented")
 
 
 class LinearClassifier(nn.Module):
@@ -42,8 +43,9 @@ class LinearClassifier(nn.Module):
             num_classes: int, number of classes
         """
         super().__init__()
+        self.fc = nn.Linear(h * w * 3, num_classes)
 
-        raise NotImplementedError("LinearClassifier.__init__() is not implemented")
+        #raise NotImplementedError("LinearClassifier.__init__() is not implemented")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -53,7 +55,10 @@ class LinearClassifier(nn.Module):
         Returns:
             tensor (b, num_classes) logits
         """
-        raise NotImplementedError("LinearClassifier.forward() is not implemented")
+        batch = x.size(0)
+        x = x.view(batch, -1)
+        return self.fc(x)
+        #raise NotImplementedError("LinearClassifier.forward() is not implemented")
 
 
 class MLPClassifier(nn.Module):
@@ -72,8 +77,11 @@ class MLPClassifier(nn.Module):
             num_classes: int, number of classes
         """
         super().__init__()
+        intermediate_output = 64
+        self.fc1 = nn.Linear(h * w * 3, intermediate_output)
+        self.fc2 = nn.Linear(intermediate_output, num_classes)
 
-        raise NotImplementedError("MLPClassifier.__init__() is not implemented")
+        #raise NotImplementedError("MLPClassifier.__init__() is not implemented")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -83,7 +91,14 @@ class MLPClassifier(nn.Module):
         Returns:
             tensor (b, num_classes) logits
         """
-        raise NotImplementedError("MLPClassifier.forward() is not implemented")
+        batch = x.size(0)
+        x = x.view(batch, -1)
+        x = self.fc1(x)
+        x = torch.relu(x)
+        logits = self.fc2(x)
+        return logits
+
+        #raise NotImplementedError("MLPClassifier.forward() is not implemented")
 
 
 class MLPClassifierDeep(nn.Module):
@@ -106,6 +121,7 @@ class MLPClassifierDeep(nn.Module):
             num_layers: int, number of hidden layers
         """
         super().__init__()
+
 
         raise NotImplementedError("MLPClassifierDeep.__init__() is not implemented")
 
