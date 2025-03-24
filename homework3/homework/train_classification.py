@@ -91,7 +91,7 @@ def train(
                 val_accuracy_metric.add(predicted_classes, labels)  # Pass predicted classes instead of raw logits
 
         # Save the model
-        save_model(model, f"{exp_dir}/{model_name}_epoch_{epoch + 1}.pth")
+        save_model(model)
 
     print("Training complete!")
 
