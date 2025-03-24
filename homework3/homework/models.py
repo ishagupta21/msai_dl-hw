@@ -7,8 +7,24 @@ HOMEWORK_DIR = Path(__file__).resolve().parent
 INPUT_MEAN = [0.2788, 0.2657, 0.2629]
 INPUT_STD = [0.2064, 0.1944, 0.2252]
 
-
 class Classifier(nn.Module):
+    class Block(nn.Module):
+        def __init__(
+            self,
+            in_channels,
+            out_channels,
+            stride
+        ): 
+            super().__init__()
+            kernel_size = 3
+            padding_size = (kernel_size-1)//2
+            self.conv = torch.nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding_size)
+            self.bn = torch.nn.BatchNorm2d(out_channels)
+            self.relu = nn.ReLU(inplace=True)
+
+        def forward(self, x):
+            return self.relu(self.bn(self.conv(x)))
+
     def __init__(
         self,
         in_channels: int = 3,
@@ -26,8 +42,26 @@ class Classifier(nn.Module):
         self.register_buffer("input_mean", torch.as_tensor(INPUT_MEAN))
         self.register_buffer("input_std", torch.as_tensor(INPUT_STD))
 
-        # TODO: implement
-        pass
+        channels_l0 = 128
+
+        cnn_layers = [
+            torch.nn.Conv2d(in_channels, channels_l0, kernel_size=11, stride=2, padding=5),
+            torch.nn.ReLU()
+        ]
+
+        num_blocks = 6
+        c1 = channels_l0
+        for _ in range(num_blocks):
+            c2 = c1
+            cnn_layers.append(self.Block(c1, c2, stride=1))
+            c1 = c2
+
+        cnn_layers.append(nn.AdaptiveAvgPool2d(1))  # Converts to (batch_size, 256, 1, 1)
+        self.network = torch.nn.Sequential(*cnn_layers)
+        self.fc_layers = nn.Sequential(
+            nn.Flatten(),  # Flatten the tensor (B, 128, 8, 8) -> (B, 128*8*8)
+            nn.Linear(128, num_classes)  # Output layer (B, num_classes)
+        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -38,10 +72,10 @@ class Classifier(nn.Module):
             tensor (b, num_classes) logits
         """
         # optional: normalizes the input
-        z = (x - self.input_mean[None, :, None, None]) / self.input_std[None, :, None, None]
+        k = (x - self.input_mean[None, :, None, None]) / self.input_std[None, :, None, None]
 
-        # TODO: replace with actual forward pass
-        logits = torch.randn(x.size(0), 6)
+        z = self.network(k) # Forward pass through the network
+        logits = self.fc_layers(z)
 
         return logits
 
