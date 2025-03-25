@@ -1,111 +1,75 @@
-import argparse
-from datetime import datetime
-from pathlib import Path
-
-import numpy as np
+from .models import Classifier, save_model, ClassificationLoss
+from .datasets.classification_dataset import load_data
 import torch
+import torchvision
+import torchvision.transforms as T
 import torch.utils.tensorboard as tb
 
-from .datasets.classification_dataset import load_data
 
-from .models import load_model, save_model
-from .metrics import AccuracyMetric  # Import AccuracyMetric
+def train(args):
+    from os import path
+    model = Classifier()
+    train_logger, valid_logger = None, None
+    if args.log_dir is not None:
+        train_logger = tb.SummaryWriter(path.join(args.log_dir, 'train'), flush_secs=1)
+        valid_logger = tb.SummaryWriter(path.join(args.log_dir, 'valid'), flush_secs=1)
 
+    """
+    Your code here, modify your HW1 / HW2 code
+    """
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model.to(device)
+    loss_func = ClassificationLoss()
+    # loss_func = torch.nn.CrossEntropyLoss(torch.tensor([0.05, 0.2, 0.05, 0.35, 0.35]))
+    loss_func.to(device)
+    optim = torch.optim.SGD(model.parameters(), lr=0.005, momentum=0.92, weight_decay=1e-4)
+    epochs = 10
 
-def train(
-    exp_dir: str = "logs",
-    model_name: str = "Classifier",
-    num_epoch: int = 1,
-    lr: float = 1e-3,
-    batch_size: int = 128,
-    seed: int = 2024,
-    **kwargs,
-):
-    # Set random seed for reproducibility
-    torch.manual_seed(seed)
+    ##train_trans = T.Compose((T.ToPILImage(), T.ColorJitter(0.8, 0.3), T.RandomHorizontalFlip(), T.RandomCrop(32), T.ToTensor())) # 96
+    ##val_trans = T.Compose((T.ToPILImage(), T.CenterCrop(size=32), T.ToTensor()))
+    data = load_data("classification_data/train", shuffle=False, batch_size=128, num_workers=2, transform_pipeline="aug")
+    val = load_data("classification_data/val", shuffle=False, batch_size=128, num_workers=2, transform_pipeline="default")
 
-    # Set device (GPU, MPS, or CPU)
-    if torch.cuda.is_available():
-        device = torch.device("cuda")
-    elif torch.backends.mps.is_available() and torch.backends.mps.is_built():
-        device = torch.device("mps")
-    else:
-        device = torch.device("cpu")
-    print(f"Using device: {device}")
+    # data = load_data('classification_data/train', transform_pipeline="aug")
+    # val = load_data('classification_data/val', transform_pipeline="default")
 
-    # Load training and validation data
-    train_loader = load_data("classification_data/train", shuffle=True, batch_size=batch_size, num_workers=2, transform_pipeline="aug")
-    val_loader = load_data("classification_data/val", shuffle=False, batch_size=batch_size, num_workers=2, transform_pipeline="default")
-
-    # Initialize model, loss, optimizer, and metrics
-    model = load_model(model_name, **kwargs).to(device)
-    criterion = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr=lr)
-    train_accuracy_metric = AccuracyMetric()
-    val_accuracy_metric = AccuracyMetric()
-
-    # Training loop
-    for epoch in range(num_epoch):
-        print(f"Epoch {epoch + 1}/{num_epoch}")
-
-        # Training phase
+    for epoch in range(epochs):
         model.train()
-        train_accuracy_metric.reset()
-        train_loss = 0.0
-        for images, labels in train_loader:
-            images, labels = images.to(device), labels.to(device)
-
-            # Forward pass
-            logits = model(images)
-            loss = criterion(logits, labels)
-            
-            # Convert logits to predicted class indices
-            predicted_classes = logits.argmax(dim=1)
-
-            # Update metrics
-            train_accuracy_metric.add(predicted_classes, labels)  # Pass predicted classes instead of raw logits
-
-            # Backward pass and optimization
-            optimizer.zero_grad()
+        count = 0
+        total_loss = 0
+        for x, y in data:
+            x = x.to(device)
+            y = y.to(device)
+            y_pred = model(x)
+            loss = loss_func(y_pred, y.long())
+            total_loss = total_loss + loss.item()
+            count += 1
             loss.backward()
-            optimizer.step()
+            optim.step()
+            optim.zero_grad()
+        print("Epoch: " + str(epoch) + ", Loss: " + str(total_loss/count))
 
-        print(train_accuracy_metric.compute())
-
-        # Validation phase
         model.eval()
-        val_accuracy_metric.reset()
-        val_loss = 0.0
-        with torch.inference_mode():
-            for images, labels in val_loader:
-                images, labels = images.to(device), labels.to(device)
+        count = 0
+        accuracy = 0
+        for image, label in val:
+          image = image.to(device)
+          label = label.to(device)
+          pred = model(image)
+          accuracy = accuracy + (pred.argmax(1) == label).float().mean().item()
+          count += 1
+        print("Epoch: " + str(epoch) + ", Accuracy: " + str(accuracy/count))
 
-                # Forward pass
-                logits = model(images)
-                loss = criterion(logits, labels)
+    save_model(model)
 
-                # Convert logits to predicted class indices
-                predicted_classes = logits.argmax(dim=1)
 
-                # Update metrics
-                val_accuracy_metric.add(predicted_classes, labels)  # Pass predicted classes instead of raw logits
+if __name__ == '__main__':
+    import argparse
 
-        # Save the model
-        save_model(model)
-
-    print("Training complete!")
-
-if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--exp_dir", type=str, default="logs")
-    parser.add_argument("--model_name", type=str, required=True)
-    parser.add_argument("--num_epoch", type=int, default=50)
-    parser.add_argument("--lr", type=float, default=1e-3)
-    parser.add_argument("--seed", type=int, default=2024)
+    parser.add_argument('--log_dir')
+    # Put custom arguments here
 
-    # optional: additional model hyperparamters
-    # parser.add_argument("--num_layers", type=int, default=3)
-
-    # pass all arguments to train
-    train(**vars(parser.parse_args()))
+    args = parser.parse_args()
+    train(args)

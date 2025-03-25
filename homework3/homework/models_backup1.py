@@ -8,173 +8,44 @@ HOMEWORK_DIR = Path(__file__).resolve().parent
 INPUT_MEAN = [0.2788, 0.2657, 0.2629]
 INPUT_STD = [0.2064, 0.1944, 0.2252]
 
-class ClassificationLoss(torch.nn.Module):
-    def forward(self, input, target):
+class Classifier(nn.Module): 
+    def __init__(
+        self,
+        in_channels: int = 3,
+        num_classes: int = 6,
+    ):       
         """
-        Your code here
+        A convolutional network for image classification.
 
-        Compute mean(-log(softmax(input)_label))
-
-        @input:  torch.Tensor((B,C))
-        @target: torch.Tensor((B,), dtype=torch.int64)
-
-        @return:  torch.Tensor((,))
-
-        Hint: Don't be too fancy, this is a one-liner
+        Args:
+            in_channels: int, number of input channels
+            num_classes: int
         """
-        return torch.nn.functional.cross_entropy(input, target)
-
-
-class CNNBlock(torch.nn.Module):
-    def __init__(self, c_in, c_out, should_stride=False):
         super().__init__()
-
-        if should_stride:
-            stride = 2
-        else:
-            stride = 1
-
-        self.conv1 = torch.nn.Conv2d(c_in, c_out, 3, stride=1, padding=1)
-        self.bn1 = torch.nn.BatchNorm2d(c_out)
-        self.conv2 = torch.nn.Conv2d(c_out, c_out, 3, padding=1)
-        self.bn2 = torch.nn.BatchNorm2d(c_out)
-        self.relu = torch.nn.ReLU()
-        self.use_residual = c_in == c_out
+        self.register_buffer("input_mean", torch.as_tensor(INPUT_MEAN))
+        self.register_buffer("input_std", torch.as_tensor(INPUT_STD))
+        # Convolutional layers
+        self.conv1 = nn.Conv2d(in_channels, 32, kernel_size=3, padding=1)
+        self.bn1 = nn.BatchNorm2d(32)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
+        self.bn2 = nn.BatchNorm2d(64)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.conv3 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
+        self.bn3 = nn.BatchNorm2d(128)
+        self.fc1 = nn.Linear(128 * 8 * 8, 128)
+        self.fc2 = nn.Linear(128, num_classes)
+        self.dropout = nn.Dropout(0.25)
 
     def forward(self, x):
-        save = x
-        x_next = self.relu(self.bn1(self.conv1(x)))   # (128, 3, 32, 32)
-        x_next = self.conv2(x_next)
-        x_next = x_next + save
-        x_next = self.bn2(x_next)
-        x_next = self.relu(x_next)
-        return x_next
-
-
-class Classifier(torch.nn.Module):
-    def __init__(self,
-            in_channels = 3,
-            num_classes = 6
-        ):
-        super().__init__()
-        """
-        Your code here
-        Hint: Base this on yours or HW2 master solution if you'd like.
-        Hint: Overall model can be similar to HW2, but you likely need some architecture changes (e.g. ResNets)
-        """
-        input_channels = in_channels
-        n_layers = 2
-        width = 128
-
-        c_in = width
-        c_out = width
-
-        layers = list()
-        layers.append(torch.nn.Conv2d(input_channels, c_out, 3, padding=1))
-
-        for i in range(n_layers):
-            layers.append(CNNBlock(c_in, c_out, should_stride=i % 2 == 0))
-            c_in = c_out
-            c_out = c_out
-
-        self.feature_extractor = torch.nn.Sequential(*layers)
-        self.linear = torch.nn.Linear(c_in, num_classes)
-
-    def forward(self, x):
-        """
-        Your code here
-        @x: torch.Tensor((B,3,64,64))
-        @return: torch.Tensor((B,6))
-        Hint: Apply input normalization inside the network, to make sure it is applied in the grader
-        """
-        x[:, 0] = (x[:, 0] - 0.5) / 0.5
-        x[:, 1] = (x[:, 1] - 0.5) / 0.5
-        x[:, 2] = (x[:, 2] - 0.5) / 0.5
-
-        x = self.feature_extractor(x)
-        x = x.mean((2, 3))
-
-        return self.linear(x)
-
-
-
-# class Classifier(nn.Module):
-#     class Block(nn.Module):
-#         def __init__(
-#             self,
-#             in_channels,
-#             out_channels,
-#             stride
-#         ): 
-#             super().__init__()
-#             kernel_size = 3
-#             padding_size = (kernel_size-1)//2
-#             self.conv1 = torch.nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding_size)
-#             #self.conv2 = torch.nn.Conv2d(in_channels, out_channels, kernel_size, 1, padding_size)
-#             self.bn = torch.nn.BatchNorm2d(out_channels)
-#             self.relu = nn.ReLU(inplace=True)
-
-#         def forward(self, x):
-#             return self.relu(self.bn((self.conv1(x))))
-
-#     def __init__(
-#         self,
-#         in_channels: int = 3,
-#         num_classes: int = 6,
-#     ):
-#         """
-#         A convolutional network for image classification.
-
-#         Args:
-#             in_channels: int, number of input channels
-#             num_classes: int
-#         """
-#         super().__init__()
-
-#         self.register_buffer("input_mean", torch.as_tensor(INPUT_MEAN))
-#         self.register_buffer("input_std", torch.as_tensor(INPUT_STD))
-
-#         channels_l0 = 64
-
-#         cnn_layers = [
-#             torch.nn.Conv2d(in_channels, channels_l0, kernel_size=11, stride=2, padding=5),
-#             torch.nn.BatchNorm2d(channels_l0),
-#             torch.nn.ReLU()
-#         ]
-
-#         num_blocks = 3
-#         c1 = channels_l0
-#         c2 =0
-#         for _ in range(num_blocks):
-#             c2 = c1 * 2
-#             cnn_layers.append(self.Block(c1, c2, stride=2))
-#             c1 = c2
-
-#         cnn_layers.append(nn.AdaptiveAvgPool2d(1))  # Converts to (batch_size, 256, 1, 1)
-#         self.network = torch.nn.Sequential(*cnn_layers)
-#         self.fc_layers = nn.Sequential(
-#             nn.Flatten(),
-#             nn.Linear(c2, 128),
-#             nn.Dropout(0.5),  # Dropout with 50% probability
-            
-#             nn.Linear(128, num_classes)
-#         )
-
-#     def forward(self, x: torch.Tensor) -> torch.Tensor:
-#         """
-#         Args:
-#             x: tensor (b, 3, h, w) image
-
-#         Returns:
-#             tensor (b, num_classes) logits
-#         """
-#         # optional: normalizes the input
-#         k = (x - self.input_mean[None, :, None, None]) / self.input_std[None, :, None, None]
-
-#         z = self.network(k) # Forward pass through the network
-#         logits = self.fc_layers(z)
-
-#         return logits
+        x = self.pool(F.relu(self.bn1(self.conv1(x))))
+        x = self.pool(F.relu(self.bn2(self.conv2(x))))
+        x = self.pool(F.relu(self.bn3(self.conv3(x))))
+        x = x.view(x.size(0), -1)
+        #x = x.view(-1, 128 * 8 * 8)
+        x = F.relu(self.fc1(x))
+        x = self.dropout(x)
+        x = self.fc2(x)
+        return x
 
     def predict(self, x: torch.Tensor) -> torch.Tensor:
         """

@@ -45,8 +45,6 @@ class MyModelNorm(nn.Module):
         return self.model(x)
 
 
-
-
 # Example usage
 
 x = torch.randn(10,3,128,128)

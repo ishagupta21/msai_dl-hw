@@ -86,6 +86,9 @@ class DetectionMetric:
         metrics["abs_depth_error"] = sum(self.avg_depth_errors) / (len(self.avg_depth_errors) + 1e-5)
         metrics["tp_depth_error"] = self.tp_depth_error_sum / (self.tp_depth_error_n + 1e-5)
 
+        miou = metrics["iou"]  # Extract mean IoU
+        accuracy = metrics["accuracy"]  # Extract accuracy (optional)
+
         return metrics
 
 

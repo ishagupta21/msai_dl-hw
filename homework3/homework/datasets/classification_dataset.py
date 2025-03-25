@@ -33,14 +33,16 @@ class SuperTuxDataset(Dataset):
         xform = None
 
         if transform_pipeline == "default":
-            xform = transforms.ToTensor()
+            xform = transforms.Compose([
+                transforms.RandomResizedCrop(size=(64, 64), scale=(0.8, 1.0)),  # Randomly crop and resize
+                transforms.ToTensor(),])
         elif transform_pipeline == "aug":
             # construct your custom augmentation
             xform = transforms.Compose([
                 transforms.RandomHorizontalFlip(p=0.5),  # Randomly flip images horizontally
                 transforms.RandomRotation(degrees=15),  # Randomly rotate images
-                transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),  # Adjust color properties
-                transforms.RandomResizedCrop(size=(224, 224), scale=(0.8, 1.0)),  # Randomly crop and resize
+                #transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),  # Adjust color properties
+                transforms.RandomResizedCrop(size=(64, 64), scale=(0.8, 1.0)),  # Randomly crop and resize
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.2788, 0.2657, 0.2629], std=[0.2064, 0.1944, 0.2252])
         
