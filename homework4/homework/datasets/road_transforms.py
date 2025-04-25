@@ -13,8 +13,9 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageEnhance
 from torchvision import transforms as tv_transforms
+import random
 
 from .road_utils import Track, homogeneous
 

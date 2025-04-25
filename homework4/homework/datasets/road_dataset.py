@@ -2,9 +2,12 @@ from pathlib import Path
 
 import numpy as np
 from torch.utils.data import ConcatDataset, DataLoader, Dataset
+import torch.nn as nn  # Importing nn for the suggested change
+import torch  # Importing torch for the suggested change
 
 from . import road_transforms
 from .road_utils import Track
+import torchvision.transforms as tv_transforms
 
 
 class RoadDataset(Dataset):
@@ -26,6 +29,7 @@ class RoadDataset(Dataset):
         self.track = Track(**info["track"].item())
         self.frames: dict[str, np.ndarray] = {k: np.stack(v) for k, v in info["frames"].item().items()}
         self.transform = self.get_transform(transform_pipeline)
+        self.global_pool = nn.AdaptiveAvgPool2d((1, 1))  # Global average pooling
 
     def get_transform(self, transform_pipeline: str):
         """
@@ -50,7 +54,14 @@ class RoadDataset(Dataset):
             xform = road_transforms.EgoTrackProcessor(self.track)
         elif transform_pipeline == "aug":
             # add your custom augmentations here
-            pass
+             xform = road_transforms.Compose(
+                [
+                    road_transforms.ImageLoader(self.episode_path),
+                    road_transforms.EgoTrackProcessor(self.track)                   #road_transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
+
+                ]
+            )
+             
 
         if xform is None:
             raise ValueError(f"Invalid transform {transform_pipeline} specified!")
